@@ -1,0 +1,14 @@
+# Artefacts de build
+build/
+lib/
+
+# Clé de signature debug (régénérée automatiquement par build.sh)
+debug.keystore
+
+# android.jar (34 Mo, téléchargé séparément, voir README)
+toolz/android.jar
+
+# Divers
+*.o
+*.so
+.DS_Store
