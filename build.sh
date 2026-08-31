@@ -1,8 +1,9 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/usr/bin/env bash
 set -e
 
 NDK=~/ndk/android-ndk-r29
-CLANG=$NDK/toolchains/llvm/prebuilt/linux-aarch64/bin/clang
+HOST_TAG=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m | sed 's/aarch64/aarch64/;s/x86_64/x86_64/')
+CLANG=$NDK/toolchains/llvm/prebuilt/$HOST_TAG/bin/clang
 ANDROID_JAR=toolz/android.jar
 API=24
 GLUE=$NDK/sources/android/native_app_glue
@@ -38,8 +39,11 @@ echo "== Signature =="
 apksigner sign --ks debug.keystore --ks-pass pass:android \
     --out build/app.apk build/app.aligned.apk
 
-echo "== Copie storage =="
-cp build/app.apk ~/storage/downloads/domino.apk
+if [ -d ~/storage/downloads ]; then
+    echo "== Copie storage =="
+    cp build/app.apk ~/storage/downloads/domino.apk
+fi
 
 echo "== Terminé : build/app.apk =="
-ls -lh build/app.apk ~/storage/downloads/domino.apk
+ls -lh build/app.apk
+[ -f ~/storage/downloads/domino.apk ] && ls -lh ~/storage/downloads/domino.apk
