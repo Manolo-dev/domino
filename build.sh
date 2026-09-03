@@ -25,6 +25,13 @@ if [ ! -f debug.keystore ]; then
 fi
 
 for ARCH in "${!TARGETS[@]}"; do
+    TRIPLE=${TARGETS[$ARCH]%$API}  # ex: aarch64-linux-android
+    if [ ! -d "$NDK/toolchains/llvm/prebuilt/$HOST_TAG/sysroot/usr/lib/$TRIPLE/$API" ]; then
+        unset TARGETS[$ARCH]
+    fi
+done
+
+for ARCH in "${!TARGETS[@]}"; do
     TARGET=${TARGETS[$ARCH]}
     mkdir -p "lib/$ARCH"
 
