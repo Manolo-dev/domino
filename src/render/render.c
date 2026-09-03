@@ -1,5 +1,5 @@
 #include "render.h"
-#include <android/native_window_jni.h>
+#include "../div/div.h"
 
 static ANativeWindow* g_window = NULL;
 
@@ -8,18 +8,17 @@ void render_init(ANativeWindow* window) {
     ANativeWindow_setBuffersGeometry(g_window, 0, 0, WINDOW_FORMAT_RGBA_8888);
 }
 
-void render_shutdown(void) {
-    g_window = NULL;
-}
+void render_shutdown(void) { g_window = NULL; }
 
-void render_frame(void) {
+void render_frame(Div *root) {
     if (!g_window) return;
+    
     ANativeWindow_Buffer buffer;
-    if (ANativeWindow_lock(g_window, &buffer, NULL) == 0) {
-        uint32_t* pixels = (uint32_t*)buffer.bits;
-        for (int y = 0; y < buffer.height; y++)
-            for (int x = 0; x < buffer.width; x++)
-                pixels[y * buffer.stride + x] = 0xFF3366CC;
-        ANativeWindow_unlockAndPost(g_window);
-    }
+
+    if (ANativeWindow_lock(g_window, &buffer, NULL) != 0) return;
+
+    div_tree_update(root, buffer.width, buffer.height);
+    div_draw(root, &buffer);
+
+    ANativeWindow_unlockAndPost(g_window);
 }

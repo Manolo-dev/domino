@@ -1,0 +1,102 @@
+#include "shapes.h"
+
+// Rectangle
+typedef struct { Unit w, h; } RectData;
+
+static float rect_signed_distance(void *data, float x, float y) {
+    RectData *rd = data;
+    float w = to_pixels(rd->w);
+    float h = to_pixels(rd->h);
+    float cx = w/2.0f, cy = h/2.0f;
+    float dx = fabsf(x - cx) - w/2.0f;
+    float dy = fabsf(y - cy) - h/2.0f;
+    if (dx < 0 && dy < 0) return -fminf(-dx, -dy);
+    else                  return sqrtf(dx*dx + dy*dy);
+}
+
+static void rect_get_sizes(void *data, Unit *w, Unit *h) {
+    RectData *rd = data;
+    *w = rd->w;
+    *h = rd->h;
+}
+
+static void rect_free(void *data) { free(data); }
+
+Shape make_rect_shape(Unit width, Unit height) {
+    RectData *rd = malloc(sizeof(RectData));
+    rd->w = width;
+    rd->h = height;
+    Shape s;
+    s._data = rd;
+    s.is_inside = rect_signed_distance;
+    s.get_sizes = rect_get_sizes;
+    s.free_data = rect_free;
+    return s;
+}
+
+// Cercle
+typedef struct { Unit radius; } CircleData;
+
+static float circle_signed_distance(void *data, float x, float y) {
+    CircleData *cd = data;
+    float r = to_pixels(cd->radius);
+    float dx = x - r, dy = y - r;
+    return sqrtf(dx*dx + dy*dy) - r;
+}
+
+static void circle_get_sizes(void *data, Unit *w, Unit *h) {
+    CircleData *cd = data;
+    int radius_px = to_pixels(cd->radius);
+    *w = make_px(radius_px * 2);
+    *h = make_px(radius_px * 2);
+}
+
+static void circle_free(void *data) { free(data); }
+
+Shape make_circle_shape(Unit radius) {
+    CircleData *cd = malloc(sizeof(CircleData));
+    cd->radius = radius;
+    Shape s;
+    s._data = cd;
+    s.is_inside = circle_signed_distance;
+    s.get_sizes = circle_get_sizes;
+    s.free_data = circle_free;
+    return s;
+}
+
+// Courbe de Lamé
+typedef struct { Unit w, h; float s; } SquircleData;
+
+static float squircle_signed_distance(void *data, float x, float y) {
+    SquircleData *sd = data;
+    float w = to_pixels(sd->w), h = to_pixels(sd->h);
+    if (!w || !h) return FLT_MAX;
+    float cx = w / 2.0f, cy = h / 2.0f;
+    float dx = x - cx, dy = y - cy;
+    float a = powf(fabsf(dx / cx), sd->s);
+    float b = powf(fabsf(dy / cy), sd->s);
+    float d = powf(a + b, 1.0f / sd->s) - 1.0f;
+    float scale = (cx + cy) * 0.5f;
+    return d * scale;
+}
+
+static void squircle_get_sizes(void *data, Unit *w, Unit *h) {
+    RectData *rd = data;
+    *w = rd->w;
+    *h = rd->h;
+}
+
+static void squircle_free(void *data) { free(data); }
+
+Shape make_squircle_shape(Unit width, Unit height, float squareness) {
+    SquircleData *sd = malloc(sizeof(SquircleData));
+    sd->w = width;
+    sd->h = height;
+    sd->s = squareness;
+    Shape s;
+    s._data = sd;
+    s.is_inside = squircle_signed_distance;
+    s.get_sizes = squircle_get_sizes;
+    s.free_data = squircle_free;
+    return s;
+}
