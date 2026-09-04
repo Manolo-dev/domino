@@ -14,7 +14,7 @@ static float rect_signed_distance(void *data, float x, float y) {
     else                  return sqrtf(dx*dx + dy*dy);
 }
 
-static void rect_get_sizes(void *data, Unit *w, Unit *h) {
+static void rect_sizes(void *data, Unit *w, Unit *h) {
     RectData *rd = data;
     *w = rd->w;
     *h = rd->h;
@@ -22,15 +22,15 @@ static void rect_get_sizes(void *data, Unit *w, Unit *h) {
 
 static void rect_free(void *data) { free(data); }
 
-Shape make_rect_shape(Unit width, Unit height) {
+Shape make_rect(Unit width, Unit height) {
     RectData *rd = malloc(sizeof(RectData));
     rd->w = width;
     rd->h = height;
     Shape s;
     s._data = rd;
-    s.is_inside = rect_signed_distance;
-    s.get_sizes = rect_get_sizes;
-    s.free_data = rect_free;
+    s.inside = rect_signed_distance;
+    s.sizes = rect_sizes;
+    s.free = rect_free;
     return s;
 }
 
@@ -44,7 +44,7 @@ static float circle_signed_distance(void *data, float x, float y) {
     return sqrtf(dx*dx + dy*dy) - r;
 }
 
-static void circle_get_sizes(void *data, Unit *w, Unit *h) {
+static void circle_sizes(void *data, Unit *w, Unit *h) {
     CircleData *cd = data;
     int radius_px = to_pixels(cd->radius);
     *w = make_px(radius_px * 2);
@@ -53,14 +53,14 @@ static void circle_get_sizes(void *data, Unit *w, Unit *h) {
 
 static void circle_free(void *data) { free(data); }
 
-Shape make_circle_shape(Unit radius) {
+Shape make_circle(Unit radius) {
     CircleData *cd = malloc(sizeof(CircleData));
     cd->radius = radius;
     Shape s;
     s._data = cd;
-    s.is_inside = circle_signed_distance;
-    s.get_sizes = circle_get_sizes;
-    s.free_data = circle_free;
+    s.inside = circle_signed_distance;
+    s.sizes = circle_sizes;
+    s.free = circle_free;
     return s;
 }
 
@@ -80,23 +80,55 @@ static float squircle_signed_distance(void *data, float x, float y) {
     return d * scale;
 }
 
-static void squircle_get_sizes(void *data, Unit *w, Unit *h) {
-    RectData *rd = data;
+static void squircle_sizes(void *data, Unit *w, Unit *h) {
+    SquircleData *rd = data;
     *w = rd->w;
     *h = rd->h;
 }
 
 static void squircle_free(void *data) { free(data); }
 
-Shape make_squircle_shape(Unit width, Unit height, float squareness) {
+Shape make_squircle(Unit width, Unit height, float squareness) {
     SquircleData *sd = malloc(sizeof(SquircleData));
     sd->w = width;
     sd->h = height;
     sd->s = squareness;
     Shape s;
     s._data = sd;
-    s.is_inside = squircle_signed_distance;
-    s.get_sizes = squircle_get_sizes;
-    s.free_data = squircle_free;
+    s.inside = squircle_signed_distance;
+    s.sizes = squircle_sizes;
+    s.free = squircle_free;
     return s;
 }
+
+
+/*
+// Trait
+typedef struct { Unit w, h, t; } LineData;
+
+static float line_signed_distance(void *data, float x, float y) {
+    LineData *rd = data;
+    float w = to_pixels(rd->w);
+    float h = to_pixels(rd->h);
+}
+
+static void line_sizes(void *data, Unit *w, Unit *h) {
+    LineData *rd = data;
+    *w = rd->w;
+    *h = rd->h;
+}
+
+static void line_free(void *data) { free(data); }
+
+Shape make_rect(Unit width, Unit height) {
+    LineData *rd = malloc(sizeof(LineData));
+    rd->w = width;
+    rd->h = height;
+    Shape s;
+    s._data = rd;
+    s.inside = line_signed_distance;
+    s.sizes = line_sizes;
+    s.free = line_free;
+    return s;
+}
+*/

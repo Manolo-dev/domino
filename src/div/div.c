@@ -17,14 +17,47 @@ static inline uint32_t blend(uint32_t bg, uint32_t fg, float a) {
     if (a >= 1.0f) return fg;
     uint8_t br = bg & 0xFF, bgc = (bg>>8)&0xFF, bb = (bg>>16)&0xFF, ba = (bg>>24)&0xFF;
     uint8_t fr = fg & 0xFF, fgc = (fg>>8)&0xFF, fb = (fg>>16)&0xFF, fa = (fg>>24)&0xFF;
-    uint8_t r = (uint8_t)(fr*a + br*(1.0f-a));
-    uint8_t g = (uint8_t)(fgc*a + bgc*(1.0f-a));
-    uint8_t b = (uint8_t)(fb*a + bb*(1.0f-a));
-    uint8_t al= (uint8_t)(fa*a + ba*(1.0f-a));
+    uint8_t  r = (uint8_t)(fr*a + br*(1.0f-a));
+    uint8_t  g = (uint8_t)(fgc*a + bgc*(1.0f-a));
+    uint8_t  b = (uint8_t)(fb*a + bb*(1.0f-a));
+    uint8_t al = (uint8_t)(fa*a + ba*(1.0f-a));
     return ((uint32_t)al<<24) | ((uint32_t)b<<16) | ((uint32_t)g<<8) | r;
 }
 
 // Div
+static void apply_inverse_transforms_f(Div *div, float *x, float *y) {
+    if (!div) return;
+    apply_inverse_transforms_f(div->_parent, x, y);
+    if (div->style.transform) {
+        float lx = *x - div->_left;
+        float ly = *y - div->_top;
+        div->style.transform(&lx, &ly);
+        *x = lx + div->_left;
+        *y = ly + div->_top;
+    }
+}
+
+#define SS_N 2
+
+static float div_coverage_supersampled(Div *div, int screen_x, int screen_y) {
+    float hits = 0.0f;
+    for (int j = 0; j < SS_N; j++) {
+        for (int i = 0; i < SS_N; i++) {
+            float sx = screen_x + (i + 0.5f) / SS_N;
+            float sy = screen_y + (j + 0.5f) / SS_N;
+
+            apply_inverse_transforms_f(div, &sx, &sy);
+
+            float rx = sx - div->_left;
+            float ry = sy - div->_top;
+            float dist = div->shape.inside(div->shape._data, rx, ry);
+
+            if (dist <= 0.0f) hits += 1.0f;
+        }
+    }
+    return hits / (SS_N * SS_N);
+}
+
 Div make_div(Shape shape, Style style) {
     Div div = {0};
     div.shape = shape;
@@ -44,8 +77,7 @@ void div_add_child(Div *parent, Div *child) {
     child->_parent = parent;
     child->_next_sibling = NULL;
 
-    if (!parent->_first_child)
-        parent->_first_child = child;
+    if (!parent->_first_child) parent->_first_child = child;
     else {
         Div *last = parent->_first_child;
 
@@ -61,8 +93,7 @@ void div_update(Div *div, int screen_w, int screen_h) {
     g_screen_h = screen_h;
 
     Unit w, h;
-    if (div->shape.get_sizes)
-        div->shape.get_sizes(div->shape._data, &w, &h);
+    if (div->shape.sizes) div->shape.sizes(div->shape._data, &w, &h);
     else {
         w = make_px(0);
         h = make_px(0);
@@ -90,7 +121,7 @@ void div_tree_update(Div *root, int screen_w, int screen_h) {
 float div_coverage(Div *div, int x, int y) {
     float rx = (float)(x - div->_left);
     float ry = (float)(y - div->_top);
-    float dist = div->shape.is_inside(div->shape._data, rx, ry);
+    float dist = div->shape.inside(div->shape._data, rx, ry);
     float aa = div->style.antialiasing > 0.0f ? div->style.antialiasing : 1.0f;
     float cov = 0.5f - dist / aa;
     if (cov < 0.0f) cov = 0.0f;
@@ -100,31 +131,17 @@ float div_coverage(Div *div, int x, int y) {
 
 static void real_div_draw(Div *div, Buffer *buffer, float accumulated_alpha) {
     float effective_alpha = accumulated_alpha * div->style.alpha;
-
     if (effective_alpha <= 0.0f) return;
 
     uint32_t *pixels = buffer->bits;
-    
-    int x0 = div->_left - 1;
-    int y0 = div->_top - 1;
-    int x1 = div->_left + div->_width + 1;
-    int y1 = div->_top + div->_height + 1;
 
-    for (int y = y0; y < y1; y++) {
-        for (int x = x0; x < x1; x++) {
-            float cov = div_coverage(div, x, y);
+    for (int ty = 0; ty < (int)buffer->height; ty++) {
+        for (int tx = 0; tx < (int)buffer->width; tx++) {
+            float cov = div_coverage_supersampled(div, tx, ty);
             if (cov <= 0.0f) continue;
 
-            int tx = x, ty = y;
-            for (TransformNode *t = div->style.transform; t; t = t->next)
-                t->fn(&tx, &ty);
-
-            if (tx < 0 || tx >= buffer->width) continue;
-            if (ty < 0 || ty >= buffer->height) continue;
-
             uint32_t *p = &pixels[ty * buffer->stride + tx];
-            float blend_alpha = cov * effective_alpha;
-            *p = blend(*p, (uint32_t)div->style.color, blend_alpha);
+            *p = blend(*p, (uint32_t)div->style.color, cov * effective_alpha);
         }
     }
 
@@ -139,25 +156,17 @@ void div_draw(Div *div, Buffer *buffer) {
     real_div_draw(div, buffer, 1.0f);
 }
 
-static void transform_add(Style *style, Transform transform) {
-    TransformNode *node = malloc(sizeof(TransformNode));
-    node->fn = transform;
-    node->next = NULL;
-
-    if (!style->transform) style->transform = node;
-    else {
-        TransformNode *last = style->transform;
-        while (last->next) last = last->next;
-        last->next = node;
-    }
-}
-
-void div_transform(Div *div, Transform transform) {
+void div_free(Div *div) {
     if (!div) return;
-    transform_add(&div->style, transform);
+
     Div *child = div->_first_child;
     while (child) {
-        div_transform(child, transform);
-        child = child->_next_sibling;
+        Div *next = child->_next_sibling;
+        div_free(child);
+        child = next;
     }
+
+    if (div->shape.free) div->shape.free(div->shape._data);
+
+    free(div);
 }
