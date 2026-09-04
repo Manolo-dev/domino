@@ -131,17 +131,41 @@ float div_coverage(Div *div, int x, int y) {
     return cov;
 }
 
+// div.c
+
+static bool div_has_transform_chain(Div *div) {
+    for (Div *d = div; d; d = d->_parent) {
+        if (d->style.transform) return true;
+    }
+    return false;
+}
+
 static void real_div_draw(Div *div, Buffer *buffer, float accumulated_alpha) {
     float effective_alpha = accumulated_alpha * div->style.alpha;
     if (effective_alpha <= 0.0f) return;
 
     uint32_t *pixels = buffer->bits;
 
-    for (int ty = 0; ty < (int)buffer->height; ty++) {
-        for (int tx = 0; tx < (int)buffer->width; tx++) {
+    int x0, y0, x1, y1;
+    if (div_has_transform_chain(div)) {
+        x0 = 0; y0 = 0;
+        x1 = (int)buffer->width; y1 = (int)buffer->height;
+    } else {
+        int pad = (int)ceilf(div->style.antialiasing > 0.0f ? div->style.antialiasing : 1.0f);
+        x0 = div->_left - pad;
+        y0 = div->_top - pad;
+        x1 = div->_left + div->_width + pad;
+        y1 = div->_top + div->_height + pad;
+        if (x0 < 0) x0 = 0;
+        if (y0 < 0) y0 = 0;
+        if (x1 > (int)buffer->width)  x1 = buffer->width;
+        if (y1 > (int)buffer->height) y1 = buffer->height;
+    }
+
+    for (int ty = y0; ty < y1; ty++) {
+        for (int tx = x0; tx < x1; tx++) {
             float cov = div_coverage_supersampled(div, tx, ty);
             if (cov <= 0.0f) continue;
-
             uint32_t *p = &pixels[ty * buffer->stride + tx];
             *p = blend(*p, (uint32_t)div->style.color, cov * effective_alpha);
         }

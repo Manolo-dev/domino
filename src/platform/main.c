@@ -11,14 +11,22 @@
 #define TARGET_FPS 60
 #define FRAME_TIME_MS (1000 / TARGET_FPS)
 
+static int g_dirty = 1; // true au démarrage pour forcer le premier rendu
+
 static void handle_cmd(struct android_app* app, int32_t cmd) {
     switch (cmd) {
         case APP_CMD_INIT_WINDOW:
             if (app->window != NULL)
                 render_init(app->window);
+            g_dirty = 1;
             break;
         case APP_CMD_TERM_WINDOW:
             render_shutdown();
+            break;
+        case APP_CMD_WINDOW_RESIZED:
+        case APP_CMD_WINDOW_REDRAW_NEEDED:
+        case APP_CMD_CONTENT_RECT_CHANGED:
+            g_dirty = 1;
             break;
     }
 }
@@ -35,13 +43,6 @@ void transform(float *x, float *y) {
 }
 
 void android_main(struct android_app* app) {
-    app->onAppCmd = handle_cmd;
-
-    int events;
-    struct android_poll_source* source;
-
-    int64_t last_frame = now_ms();
-
     Div root = make_div(
         make_rect(make_vw(100), make_vh(100)),
         STYLE_INIT(.color=0xFF003309, .left=make_px(0), .top=make_px(0))
@@ -125,10 +126,15 @@ void android_main(struct android_app* app) {
     div_add_child(&domino, &c11);
     div_add_child(&domino, &c12);
 
+    app->onAppCmd = handle_cmd;
+
+    int events;
+    struct android_poll_source* source;
+
+    int64_t last_frame = now_ms();
+
     while (1) {
-        int64_t elapsed = now_ms() - last_frame;
-        int timeout_ms = (int)(FRAME_TIME_MS - elapsed);
-        if (timeout_ms < 0) timeout_ms = 0;
+        int timeout_ms = g_dirty ? 0 : -1; // -1 = bloque jusqu'au prochain event si rien à dessiner
 
         while (ALooper_pollOnce(timeout_ms, NULL, &events, (void**)&source) >= 0) {
             if (source != NULL) source->process(app, source);
@@ -139,8 +145,12 @@ void android_main(struct android_app* app) {
         int64_t frame_start = now_ms();
         if (frame_start - last_frame >= FRAME_TIME_MS) {
             InputState in = input_poll(app);
-            (void)in; // TODO: transmettre au rendu quand la logique de clic sera branchée
-            render_frame(&root);
+            (void)in;
+
+            if (g_dirty && app->window != NULL) {
+                render_frame(&root);
+                g_dirty = 0;
+            }
             last_frame = frame_start;
         }
     }
