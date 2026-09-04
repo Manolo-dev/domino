@@ -91,19 +91,24 @@ float div_coverage(Div *div, int x, int y) {
     float rx = (float)(x - div->_left);
     float ry = (float)(y - div->_top);
     float dist = div->shape.is_inside(div->shape._data, rx, ry);
-    float cov = 0.5f - dist;
+    float aa = div->style.antialiasing > 0.0f ? div->style.antialiasing : 1.0f;
+    float cov = 0.5f - dist / aa;
     if (cov < 0.0f) cov = 0.0f;
     if (cov > 1.0f) cov = 1.0f;
     return cov;
 }
 
-void div_draw(Div *div, ANativeWindow_Buffer *buffer) {
-    uint32_t *pixels = (uint32_t*)buffer->bits;
+static void real_div_draw(Div *div, Buffer *buffer, float accumulated_alpha) {
+    float effective_alpha = accumulated_alpha * div->style.alpha;
 
-    int x0 = div->_left - 5;
-    int y0 = div->_top - 5;
-    int x1 = div->_left + div->_width + 5;
-    int y1 = div->_top + div->_height + 5;
+    if (effective_alpha <= 0.0f) return;
+
+    uint32_t *pixels = buffer->bits;
+    
+    int x0 = div->_left - 1;
+    int y0 = div->_top - 1;
+    int x1 = div->_left + div->_width + 1;
+    int y1 = div->_top + div->_height + 1;
 
     for (int y = y0; y < y1; y++) {
         for (int x = x0; x < x1; x++) {
@@ -118,15 +123,20 @@ void div_draw(Div *div, ANativeWindow_Buffer *buffer) {
             if (ty < 0 || ty >= buffer->height) continue;
 
             uint32_t *p = &pixels[ty * buffer->stride + tx];
-            *p = blend(*p, (uint32_t)div->style.color, cov);
+            float blend_alpha = cov * effective_alpha;
+            *p = blend(*p, (uint32_t)div->style.color, blend_alpha);
         }
     }
 
     Div *child = div->_first_child;
     while (child) {
-        div_draw(child, buffer);
+        real_div_draw(child, buffer, effective_alpha);
         child = child->_next_sibling;
     }
+}
+
+void div_draw(Div *div, Buffer *buffer) {
+    real_div_draw(div, buffer, 1.0f);
 }
 
 static void transform_add(Style *style, Transform transform) {
@@ -134,9 +144,8 @@ static void transform_add(Style *style, Transform transform) {
     node->fn = transform;
     node->next = NULL;
 
-    if (!style->transform) {
-        style->transform = node;
-    } else {
+    if (!style->transform) style->transform = node;
+    else {
         TransformNode *last = style->transform;
         while (last->next) last = last->next;
         last->next = node;

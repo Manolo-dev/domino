@@ -18,7 +18,7 @@ void render_frame(Div *root) {
     if (ANativeWindow_lock(g_window, &buffer, NULL) != 0) return;
 
     div_tree_update(root, buffer.width, buffer.height);
-    div_draw(root, &buffer);
+    div_draw(root, &(Buffer){ buffer.bits, buffer.width, buffer.height, buffer.stride });
 
     ANativeWindow_unlockAndPost(g_window);
 }
