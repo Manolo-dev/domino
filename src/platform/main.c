@@ -30,8 +30,8 @@ static int64_t now_ms(void) {
 }
 
 void transform(float *x, float *y) {
-    *x *= 0.1 * (*y);
-    *y *= 0.1 * (*x);
+    *x *= 0.01 * (*y);
+    *y *= 0.01 * (*x);
 }
 
 void android_main(struct android_app* app) {

@@ -39,23 +39,15 @@ static void apply_inverse_transforms_f(Div *div, float *x, float *y) {
 
 #define SS_N 2
 
-static float div_coverage_supersampled(Div *div, int screen_x, int screen_y) {
-    float hits = 0.0f;
-    for (int j = 0; j < SS_N; j++) {
-        for (int i = 0; i < SS_N; i++) {
-            float sx = screen_x + (i + 0.5f) / SS_N;
-            float sy = screen_y + (j + 0.5f) / SS_N;
+float div_signed_distance(Div *div, float sx, float sy) {
+    apply_inverse_transforms_f(div, &sx, &sy);
+    float rx = sx - div->_left;
+    float ry = sy - div->_top;
+    return div->shape.inside(div->shape._data, rx, ry);
+}
 
-            apply_inverse_transforms_f(div, &sx, &sy);
-
-            float rx = sx - div->_left;
-            float ry = sy - div->_top;
-            float dist = div->shape.inside(div->shape._data, rx, ry);
-
-            if (dist <= 0.0f) hits += 1.0f;
-        }
-    }
-    return hits / (SS_N * SS_N);
+bool div_hit(Div *div, float x, float y) {
+    return div_signed_distance(div, x, y) <= 0.0f;
 }
 
 Div make_div(Shape shape, Style style) {
@@ -118,10 +110,20 @@ void div_tree_update(Div *root, int screen_w, int screen_h) {
     }
 }
 
+static float div_coverage_supersampled(Div *div, int screen_x, int screen_y) {
+    float hits = 0.0f;
+    for (int j = 0; j < SS_N; j++) {
+        for (int i = 0; i < SS_N; i++) {
+            float sx = screen_x + (i + 0.5f) / SS_N;
+            float sy = screen_y + (j + 0.5f) / SS_N;
+            if (div_signed_distance(div, sx, sy) <= 0.0f) hits += 1.0f;
+        }
+    }
+    return hits / (SS_N * SS_N);
+}
+
 float div_coverage(Div *div, int x, int y) {
-    float rx = (float)(x - div->_left);
-    float ry = (float)(y - div->_top);
-    float dist = div->shape.inside(div->shape._data, rx, ry);
+    float dist = div_signed_distance(div, (float)x, (float)y);
     float aa = div->style.antialiasing > 0.0f ? div->style.antialiasing : 1.0f;
     float cov = 0.5f - dist / aa;
     if (cov < 0.0f) cov = 0.0f;

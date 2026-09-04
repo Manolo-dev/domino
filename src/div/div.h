@@ -72,11 +72,13 @@ Shape make_rect_shape(Unit width, Unit height);
 Shape make_circle_shape(Unit radius);
 
 Div make_div(Shape shape, Style style);
-void div_onclick(Div *div, Onclick onclick);
-void div_add_child(Div *parent, Div *child);
-void div_update(Div *div, int w, int h);
-void div_tree_update(Div *root, int wp, int hp);
-void div_draw(Div *div, Buffer *buffer);
-void div_free(Div *div);
+void  div_onclick(Div *div, Onclick onclick);
+float div_signed_distance(Div *div, float x, float y);
+bool  div_hit(Div *div, float x, float y);
+void  div_add_child(Div *parent, Div *child);
+void  div_update(Div *div, int w, int h);
+void  div_tree_update(Div *root, int wp, int hp);
+void  div_draw(Div *div, Buffer *buffer);
+void  div_free(Div *div);
 
 int to_pixels(Unit u);
