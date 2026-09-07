@@ -45,29 +45,67 @@ static int64_t now_ms(void) {
     return (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
-static Transform rotate(float angle) {
-    float c = cosf(angle);
-    float s = sinf(angle);
-    return (Transform){ .type = M2, .m2 = { c, -s, s, c } };
+// static Transform rotate(float angle) {
+//     float c = cosf(angle);
+//     float s = sinf(angle);
+//     return (Transform){ .type = M2, .m2 = { c, -s, s, c } };
+// }
+
+Transform mat3_mul(Transform A, Transform B) {
+    Transform C;
+    C.type = M3;
+    float a11=A.m3.a, a12=A.m3.b, a13=A.m3.c;
+    float a21=A.m3.d, a22=A.m3.e, a23=A.m3.f;
+    float a31=A.m3.g, a32=A.m3.h, a33=A.m3.i;
+
+    float b11=B.m3.a, b12=B.m3.b, b13=B.m3.c;
+    float b21=B.m3.d, b22=B.m3.e, b23=B.m3.f;
+    float b31=B.m3.g, b32=B.m3.h, b33=B.m3.i;
+
+    C.m3.a = a11*b11 + a12*b21 + a13*b31;
+    C.m3.b = a11*b12 + a12*b22 + a13*b32;
+    C.m3.c = a11*b13 + a12*b23 + a13*b33;
+
+    C.m3.d = a21*b11 + a22*b21 + a23*b31;
+    C.m3.e = a21*b12 + a22*b22 + a23*b32;
+    C.m3.f = a21*b13 + a22*b23 + a23*b33;
+
+    C.m3.g = a31*b11 + a32*b21 + a33*b31;
+    C.m3.h = a31*b12 + a32*b22 + a33*b32;
+    C.m3.i = a31*b13 + a32*b23 + a33*b33;
+    return C;
 }
 
-static Transform rotate_perspective_x(float angle, float focal_length) {
+static Transform rotate_x(float angle, float focal_length) {
     float c = cosf(angle);
     float s = sinf(angle);
 
-    // Matrice :
-    // [ 1   0       0   ]
-    // [ 0   cos(θ)  0   ]
-    // [ 0   sin(θ)/f 1  ]
-    //
-    // Résultat : x' = x / (1 + y * sin(θ) / f)
-    //            y' = (y * cos(θ)) / (1 + y * sin(θ) / f)
+    // [ 1 |    0     | 0 ]
+    // [ 0 |  cos(θ)  | 0 ]
+    // [ 0 | sin(θ)/f | 1 ]
     return (Transform){
         .type = M3,
         .m3 = {
             .a = 1, .b = 0, .c = 0,
             .d = c, .e = 0, .f = 0,
             .g = 0, .h = s / focal_length, .i = 1
+        }
+    };
+}
+
+static Transform rotate_y(float angle, float focal_length) {
+    float c = cosf(angle);
+    float s = sinf(angle);
+
+    // [  c   | 0 | 0 ]
+    // [  0   | 1 | 0 ]
+    // [ -s/f | 0 | 1 ]
+    return (Transform){
+        .type = M3,
+        .m3 = {
+            .a = c, .b = 0, .c = 0,
+            .d = 0, .e = 1, .f = 0,
+            .g = -s / focal_length, .h = 0, .i = 1
         }
     };
 }
@@ -86,7 +124,7 @@ static void build_scene(void) {
 
     domino = make_div(
         make_squircle(VW(22), VW(44), 6),
-        STYLE_INIT(.color=0xFFD0E8ED, .left=VW(20), .top=VH(20), .transform=rotate_perspective_x(30, g_screen_w * 2.0), .anchor=CENTER)
+        STYLE_INIT(.color=0xFFD0E8ED, .left=VW(20), .top=VH(20), .transform=mat3_mul(rotate_y(g_angle / 2, g_screen_h * 2.0), rotate_x(g_angle, g_screen_w * 2.0)), .anchor=CENTER)
     );
     div_add_child(&root, &domino);
 
@@ -149,30 +187,27 @@ void android_main(struct android_app* app) {
     int64_t last_frame = now_ms();
 
     while (1) {
-        int timeout_ms = g_dirty ? 0 : -1;
+        int64_t now = now_ms();
+        int64_t next_frame = last_frame + FRAME_TIME_MS;
+        int64_t wait_ms = next_frame - now;
 
-        while (ALooper_pollOnce(timeout_ms, NULL, &events, (void**)&source) >= 0) {
+        if (wait_ms < 0) wait_ms = 0;
+
+        while (ALooper_pollOnce(wait_ms, NULL, &events, (void**)&source) >= 0) {
             if (source != NULL) source->process(app, source);
             if (app->destroyRequested != 0) return;
-            timeout_ms = 0;
+            wait_ms = 0;
         }
 
         int64_t frame_start = now_ms();
         if (frame_start - last_frame >= FRAME_TIME_MS) {
-            InputState in = input_poll(app);
-            (void)in;
-
-            domino._dirty = true;
-
             float delta = (float)(frame_start - last_frame) / 1000.0f;
             g_angle += delta * 0.8f;
-            domino.style.transform = rotate_perspective_x(g_angle, g_screen_w * 2.0);
-            g_dirty = true;
+            domino.style.transform = mat3_mul(rotate_y(g_angle / 2, g_screen_h * 2.0), rotate_x(g_angle, g_screen_w * 2.0));
+            domino._dirty = true;
 
-            if (g_dirty && app->window != NULL) {
-                render_frame(&root);
-                g_dirty = false;
-            }
+            if (app->window != NULL) render_frame(&root);
+
             last_frame = frame_start;
         }
     }
