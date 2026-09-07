@@ -5,8 +5,8 @@ typedef struct { Unit w, h; } RectData;
 
 static float rect_signed_distance(void *data, float x, float y) {
     RectData *rd = data;
-    float w = to_pixels(rd->w);
-    float h = to_pixels(rd->h);
+    float w = rd->w;
+    float h = rd->h;
     float cx = w/2.0f, cy = h/2.0f;
     float dx = fabsf(x - cx) - w/2.0f;
     float dy = fabsf(y - cy) - h/2.0f;
@@ -39,16 +39,16 @@ typedef struct { Unit radius; } CircleData;
 
 static float circle_signed_distance(void *data, float x, float y) {
     CircleData *cd = data;
-    float r = to_pixels(cd->radius);
+    float r = cd->radius;
     float dx = x - r, dy = y - r;
     return sqrtf(dx*dx + dy*dy) - r;
 }
 
 static void circle_sizes(void *data, Unit *w, Unit *h) {
     CircleData *cd = data;
-    int radius_px = to_pixels(cd->radius);
-    *w = make_px(radius_px * 2);
-    *h = make_px(radius_px * 2);
+    int radius_px = cd->radius;
+    *w = radius_px * 2;
+    *h = radius_px * 2;
 }
 
 static void circle_free(void *data) { free(data); }
@@ -69,7 +69,7 @@ typedef struct { Unit w, h; float s; } SquircleData;
 
 static float squircle_signed_distance(void *data, float x, float y) {
     SquircleData *sd = data;
-    float w = to_pixels(sd->w), h = to_pixels(sd->h);
+    float w = sd->w, h = sd->h;
     if (!w || !h) return FLT_MAX;
     float cx = w / 2.0f, cy = h / 2.0f;
     float dx = x - cx, dy = y - cy;
@@ -108,8 +108,8 @@ typedef struct { Unit w, h, t; } LineData;
 
 static float line_signed_distance(void *data, float x, float y) {
     LineData *rd = data;
-    float w = to_pixels(rd->w);
-    float h = to_pixels(rd->h);
+    float w = rd->w;
+    float h = rd->h;
 }
 
 static void line_sizes(void *data, Unit *w, Unit *h) {

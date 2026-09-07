@@ -4,33 +4,50 @@
 #include <stdint.h>
 #include <math.h>
 
+typedef struct {
+    enum { M2, M3 } type;
+    union {
+        struct { float a, b, c, d; } m2;
+        struct { float a, b, c, d, e, f, g, h, i; } m3;
+    };
+} Transform;
+
+#define TRANSFORM_IDENTITY ((Transform){ .type = M2, .m2 = {1, 0, 0, 1} })
+
 #define STYLE_INIT(...)                                                  \
     _Pragma("clang diagnostic push")                                     \
     _Pragma("clang diagnostic ignored \"-Winitializer-overrides\"")      \
     _Pragma("clang diagnostic ignored \"-Wmissing-braces\"")             \
     (Style){                                                             \
         .color = 0,                                                      \
-        .left = {0},        /* accolades pour éviter -Wmissing-braces */ \
-        .top = {0},         /* idem */                                   \
+        .left = 0,                                                       \
+        .top = 0,                                                        \
         .antialiasing = 1.0f,                                            \
         .alpha = 1.0f,                                                   \
-        .transform = NULL,                                               \
+        .transform = TRANSFORM_IDENTITY,                                 \
+        .anchor = LEFT_TOP,                                              \
         __VA_ARGS__                                                      \
     }                                                                    \
     _Pragma("clang diagnostic pop")
 
 typedef void (*Onclick)(void);
-typedef void (*Transform)(float *, float *);
+
+typedef enum {
+    LEFT_TOP      = 0,
+    LEFT_CENTER   = 1,
+    LEFT_BOTTOM   = 2,
+    CENTER_TOP    = 3,
+    CENTER        = 4,
+    CENTER_BOTTOM = 5,
+    RIGHT_TOP     = 6,
+    RIGHT_CENTER  = 7,
+    RIGHT_BOTTOM  = 8,
+} Anchor;
+
+typedef float Unit;
 
 typedef struct {
-    enum { PX, VW, VH } tag;
-    union { int i; float f; } value;
-} Unit;
-
-typedef struct {
-    //private:
     void *_data;
-    //public:
     float (*inside)(void *data, float x, float y);
     void  (*sizes)(void *data, Unit *width, Unit *height);
     void  (*free)(void *data);
@@ -43,11 +60,14 @@ typedef struct {
     float alpha;
     float antialiasing;
     Transform transform;
+    Anchor anchor;
 } Style;
 
 typedef struct div {
     //private:
     int _left, _top, _width, _height;
+    Transform _inv;
+    bool _dirty;
     struct div *_parent;
     struct div *_first_child;
     struct div *_next_sibling;
@@ -64,10 +84,6 @@ typedef struct {
     uint32_t stride;
 } Buffer;
 
-static inline Unit make_px(  int v) { return (Unit){PX, {.i = v}}; }
-static inline Unit make_vw(float v) { return (Unit){VW, {.f = v}}; }
-static inline Unit make_vh(float v) { return (Unit){VH, {.f = v}}; }
-
 Shape make_rect_shape(Unit width, Unit height);
 Shape make_circle_shape(Unit radius);
 
@@ -80,5 +96,3 @@ void  div_update(Div *div, int w, int h);
 void  div_tree_update(Div *root, int wp, int hp);
 void  div_draw(Div *div, Buffer *buffer);
 void  div_free(Div *div);
-
-int to_pixels(Unit u);
