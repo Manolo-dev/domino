@@ -5,7 +5,7 @@ typedef struct {
     enum { M2, M3 } type;
     union {
         struct { float a, b, c, d; } m2;
-        struct { float a, b, c, d, e, f, g, h, i; } m3;
+        struct { float a, b, d, e, c, f, g, h, i; } m3;
     };
 } Mat;
 
@@ -13,3 +13,7 @@ typedef struct {
 
 void mat_apply(Mat m, float *x, float *y);
 Mat mat_inverse(Mat m);
+Mat mat_mul(Mat m, Mat n);
+Mat rotate(float angle);
+Mat rotate_x(float angle, float focal_length);
+Mat rotate_y(float angle, float focal_length);

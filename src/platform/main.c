@@ -8,6 +8,7 @@
 #include "../input/input.h"
 #include "../div/div.h"
 #include "../div/shapes.h"
+#include "../div/mat.h"
 
 #define LOG(...) __android_log_print(ANDROID_LOG_INFO, "Domino", __VA_ARGS__)
 
@@ -45,71 +46,6 @@ static int64_t now_ms(void) {
     return (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
-// static Mat rotate(float angle) {
-//     float c = cosf(angle);
-//     float s = sinf(angle);
-//     return (Mat){ .type = M2, .m2 = { c, -s, s, c } };
-// }
-
-Mat mat3_mul(Mat A, Mat B) {
-    Mat C;
-    C.type = M3;
-    float a11=A.m3.a, a12=A.m3.b, a13=A.m3.c;
-    float a21=A.m3.d, a22=A.m3.e, a23=A.m3.f;
-    float a31=A.m3.g, a32=A.m3.h, a33=A.m3.i;
-
-    float b11=B.m3.a, b12=B.m3.b, b13=B.m3.c;
-    float b21=B.m3.d, b22=B.m3.e, b23=B.m3.f;
-    float b31=B.m3.g, b32=B.m3.h, b33=B.m3.i;
-
-    C.m3.a = a11*b11 + a12*b21 + a13*b31;
-    C.m3.b = a11*b12 + a12*b22 + a13*b32;
-    C.m3.c = a11*b13 + a12*b23 + a13*b33;
-
-    C.m3.d = a21*b11 + a22*b21 + a23*b31;
-    C.m3.e = a21*b12 + a22*b22 + a23*b32;
-    C.m3.f = a21*b13 + a22*b23 + a23*b33;
-
-    C.m3.g = a31*b11 + a32*b21 + a33*b31;
-    C.m3.h = a31*b12 + a32*b22 + a33*b32;
-    C.m3.i = a31*b13 + a32*b23 + a33*b33;
-    return C;
-}
-
-static Mat rotate_x(float angle, float focal_length) {
-    float c = cosf(angle);
-    float s = sinf(angle);
-
-    // [ 1 |    0     | 0 ]
-    // [ 0 |  cos(θ)  | 0 ]
-    // [ 0 | sin(θ)/f | 1 ]
-    return (Mat){
-        .type = M3,
-        .m3 = {
-            .a = 1, .b = 0, .c = 0,
-            .d = c, .e = 0, .f = 0,
-            .g = 0, .h = s / focal_length, .i = 1
-        }
-    };
-}
-
-static Mat rotate_y(float angle, float focal_length) {
-    float c = cosf(angle);
-    float s = sinf(angle);
-
-    // [  c   | 0 | 0 ]
-    // [  0   | 1 | 0 ]
-    // [ -s/f | 0 | 1 ]
-    return (Mat){
-        .type = M3,
-        .m3 = {
-            .a = c, .b = 0, .c = 0,
-            .d = 0, .e = 1, .f = 0,
-            .g = -s / focal_length, .h = 0, .i = 1
-        }
-    };
-}
-
 static Div domino;
 static float g_angle = 0.0f;
 
@@ -124,7 +60,7 @@ static void build_scene(void) {
 
     domino = make_div(
         make_squircle(VW(22), VW(44), 6),
-        STYLE_INIT(.color=0xFFD0E8ED, .left=VW(20), .top=VH(20), .transform=mat3_mul(rotate_y(g_angle / 2, g_screen_h * 2.0), rotate_x(g_angle, g_screen_w * 2.0)), .anchor=CENTER)
+        STYLE_INIT(.color=0xFFD0E8ED, .left=VW(20), .top=VH(20), .transform=mat_mul(rotate_y(g_angle / 2, g_screen_h * 2.0), rotate_x(g_angle, g_screen_w * 2.0)), .anchor=CENTER)
     );
     div_add_child(&root, &domino);
 
@@ -203,7 +139,7 @@ void android_main(struct android_app* app) {
         if (frame_start - last_frame >= FRAME_TIME_MS) {
             float delta = (float)(frame_start - last_frame) / 1000.0f;
             g_angle += delta * 0.8f;
-            domino.style.transform = mat3_mul(rotate_y(g_angle / 2, g_screen_h * 2.0), rotate_x(g_angle, g_screen_w * 2.0));
+            domino.style.transform = mat_mul(rotate_y(g_angle / 2, g_screen_h * 2.0), rotate_x(g_angle, g_screen_w * 2.0));
             domino._dirty = true;
 
             if (app->window != NULL) render_frame(&root);

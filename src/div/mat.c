@@ -41,3 +41,87 @@ Mat mat_inverse(Mat m) {
         .g = C*id, .h = F*id, .i = I*id
     }};
 }
+
+Mat mat_mul(Mat m, Mat n) {
+    if (m.type == M2 && n.type == M2) {
+        return (Mat){ .type = M2, .m2 = {
+            .a = m.m2.a*n.m2.a + m.m2.b*n.m2.c,
+            .b = m.m2.a*n.m2.b + m.m2.b*n.m2.d,
+            .c = m.m2.c*n.m2.a + m.m2.d*n.m2.c,
+            .d = m.m2.c*n.m2.b + m.m2.d*n.m2.d,
+        }};
+    }
+
+    if (m.type == M2) {
+        m.type = M3;
+        m.m3.c = 0;
+        m.m3.f = 0;
+        m.m3.g = 0;
+        m.m3.h = 0;
+        m.m3.f = 1;
+    }
+
+    if (n.type == M2) {
+        n.type = M3;
+        n.m3.c = 0;
+        n.m3.f = 0;
+        n.m3.g = 0;
+        n.m3.h = 0;
+        n.m3.f = 1;
+    }
+
+    return (Mat){ .type = M3, .m3 = {
+        .a = m.m3.a*n.m3.a + m.m3.b*n.m3.d + m.m3.c*n.m3.g,
+        .b = m.m3.a*n.m3.b + m.m3.b*n.m3.e + m.m3.c*n.m3.h,
+        .c = m.m3.a*n.m3.c + m.m3.b*n.m3.f + m.m3.c*n.m3.i,
+
+        .d = m.m3.d*n.m3.a + m.m3.e*n.m3.d + m.m3.f*n.m3.g,
+        .e = m.m3.d*n.m3.b + m.m3.e*n.m3.e + m.m3.f*n.m3.h,
+        .f = m.m3.d*n.m3.c + m.m3.e*n.m3.f + m.m3.f*n.m3.i,
+
+        .g = m.m3.g*n.m3.a + m.m3.h*n.m3.d + m.m3.i*n.m3.g,
+        .h = m.m3.g*n.m3.b + m.m3.h*n.m3.e + m.m3.i*n.m3.h,
+        .i = m.m3.g*n.m3.c + m.m3.h*n.m3.f + m.m3.i*n.m3.i,
+    }};
+}
+
+// Transform
+Mat rotate(float angle) {
+    float c = cosf(angle);
+    float s = sinf(angle);
+    return (Mat){ .type = M2, .m2 = { c, -s, s, c } };
+}
+
+Mat rotate_x(float angle, float focal_length) {
+    float c = cosf(angle);
+    float s = sinf(angle);
+
+    // [ 1      0       0 ]
+    // [ 0    cos(θ)    0 ]
+    // [ 0   sin(θ)/f   1 ]
+    return (Mat){
+        .type = M3,
+        .m3 = {
+            .a = 1, .b = 0, .c = 0,
+            .d = c, .e = 0, .f = 0,
+            .g = 0, .h = s / focal_length, .i = 1
+        }
+    };
+}
+
+Mat rotate_y(float angle, float focal_length) {
+    float c = cosf(angle);
+    float s = sinf(angle);
+
+    // [  c     0   0 ]
+    // [  0     1   0 ]
+    // [ -s/f   0   1 ]
+    return (Mat){
+        .type = M3,
+        .m3 = {
+            .a = c, .b = 0, .c = 0,
+            .d = 0, .e = 1, .f = 0,
+            .g = -s / focal_length, .h = 0, .i = 1
+        }
+    };
+}
