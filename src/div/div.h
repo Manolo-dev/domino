@@ -3,16 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <math.h>
-
-typedef struct {
-    enum { M2, M3 } type;
-    union {
-        struct { float a, b, c, d; } m2;
-        struct { float a, b, c, d, e, f, g, h, i; } m3;
-    };
-} Transform;
-
-#define TRANSFORM_IDENTITY ((Transform){ .type = M2, .m2 = {1, 0, 0, 1} })
+#include "mat.h"
 
 #define STYLE_INIT(...)                                                  \
     _Pragma("clang diagnostic push")                                     \
@@ -24,7 +15,7 @@ typedef struct {
         .top = 0,                                                        \
         .antialiasing = 1.0f,                                            \
         .alpha = 1.0f,                                                   \
-        .transform = TRANSFORM_IDENTITY,                                 \
+        .transform = MAT_IDENTITY,                                 \
         .anchor = LEFT_TOP,                                              \
         __VA_ARGS__                                                      \
     }                                                                    \
@@ -59,14 +50,14 @@ typedef struct {
     Unit top;
     float alpha;
     float antialiasing;
-    Transform transform;
+    Mat transform;
     Anchor anchor;
 } Style;
 
 typedef struct div {
     //private:
     int _left, _top, _width, _height;
-    Transform _inv;
+    Mat _inv;
     bool _dirty;
     struct div *_parent;
     struct div *_first_child;

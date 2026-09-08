@@ -11,7 +11,7 @@
 
 #define LOG(...) __android_log_print(ANDROID_LOG_INFO, "Domino", __VA_ARGS__)
 
-#define TARGET_FPS 60
+#define TARGET_FPS 120
 #define FRAME_TIME_MS (1000 / TARGET_FPS)
 
 static bool g_dirty = true;
@@ -45,14 +45,14 @@ static int64_t now_ms(void) {
     return (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
-// static Transform rotate(float angle) {
+// static Mat rotate(float angle) {
 //     float c = cosf(angle);
 //     float s = sinf(angle);
-//     return (Transform){ .type = M2, .m2 = { c, -s, s, c } };
+//     return (Mat){ .type = M2, .m2 = { c, -s, s, c } };
 // }
 
-Transform mat3_mul(Transform A, Transform B) {
-    Transform C;
+Mat mat3_mul(Mat A, Mat B) {
+    Mat C;
     C.type = M3;
     float a11=A.m3.a, a12=A.m3.b, a13=A.m3.c;
     float a21=A.m3.d, a22=A.m3.e, a23=A.m3.f;
@@ -76,14 +76,14 @@ Transform mat3_mul(Transform A, Transform B) {
     return C;
 }
 
-static Transform rotate_x(float angle, float focal_length) {
+static Mat rotate_x(float angle, float focal_length) {
     float c = cosf(angle);
     float s = sinf(angle);
 
     // [ 1 |    0     | 0 ]
     // [ 0 |  cos(θ)  | 0 ]
     // [ 0 | sin(θ)/f | 1 ]
-    return (Transform){
+    return (Mat){
         .type = M3,
         .m3 = {
             .a = 1, .b = 0, .c = 0,
@@ -93,14 +93,14 @@ static Transform rotate_x(float angle, float focal_length) {
     };
 }
 
-static Transform rotate_y(float angle, float focal_length) {
+static Mat rotate_y(float angle, float focal_length) {
     float c = cosf(angle);
     float s = sinf(angle);
 
     // [  c   | 0 | 0 ]
     // [  0   | 1 | 0 ]
     // [ -s/f | 0 | 1 ]
-    return (Transform){
+    return (Mat){
         .type = M3,
         .m3 = {
             .a = c, .b = 0, .c = 0,
