@@ -22,35 +22,11 @@ static inline void anchor_offset(Div *div, float *ox, float *oy) {
     *oy = ((float)(div->style.anchor % 3) * 0.5f) * div->_height;
 }
 
-static void apply_inverse_transforms_f(Div *div, float *x, float *y) {
-    if (!div) return;
-    apply_inverse_transforms_f(div->_parent, x, y);
-    float ox, oy;
-    anchor_offset(div, &ox, &oy);
-    float lx = *x - div->_left - ox;
-    float ly = *y - div->_top - oy;
-    mat_apply(div->_inv, &lx, &ly);
-    *x = lx + div->_left + ox;
-    *y = ly + div->_top + oy;
-}
-
-static void apply_forward_transforms_f(Div *div, float *x, float *y) {
-    if (!div) return;
-    float ox, oy;
-    anchor_offset(div, &ox, &oy);
-    float lx = *x - div->_left - ox;
-    float ly = *y - div->_top - oy;
-    mat_apply(div->style.transform, &lx, &ly);
-    *x = lx + div->_left + ox;
-    *y = ly + div->_top + oy;
-    apply_forward_transforms_f(div->_parent, x, y);
-}
-
 // Contenance div
 #define SS_N 2
 
 float div_signed_distance(Div *div, float sx, float sy) {
-    apply_inverse_transforms_f(div, &sx, &sy);
+    mat_apply(div->_world_inv, &sx, &sy);
     float rx = sx - div->_left;
     float ry = sy - div->_top;
     return div->shape.inside(div->shape._data, rx, ry);
@@ -107,10 +83,15 @@ void div_update(Div *div, int screen_w, int screen_h) {
     div->_width  = (int)w;
     div->_height = (int)h;
 
-    if (div->_dirty) {
-        div->_inv = mat_inverse(div->style.transform);
-        div->_dirty = false;
-    }
+    float ox, oy;
+    anchor_offset(div, &ox, &oy);
+    float px = div->_left + ox, py = div->_top + oy;
+
+    Mat local = mat_mul(translate(px, py), div->style.transform);
+    local = mat_mul(local, translate(-px, -py));
+
+    div->_world     = div->_parent ? mat_mul(div->_parent->_world, local) : local;
+    div->_world_inv = mat_inverse(div->_world);
 }
 
 void div_tree_update(Div *root, int screen_w, int screen_h) {
@@ -152,7 +133,7 @@ static void div_screen_bbox(Div *div, int *x0, int *y0, int *x1, int *y1) {
     for (int k = 0; k < 4; k++) {
         float x = div->_left + cx[k];
         float y = div->_top  + cy[k];
-        apply_forward_transforms_f(div, &x, &y);
+        mat_apply(div->_world, &x, &y);
         if (x < minx) minx = x; if (x > maxx) maxx = x;
         if (y < miny) miny = y; if (y > maxy) maxy = y;
     }

@@ -17,3 +17,5 @@ Mat mat_mul(Mat m, Mat n);
 Mat rotate(float angle);
 Mat rotate_x(float angle, float focal_length);
 Mat rotate_y(float angle, float focal_length);
+Mat translate(float x, float y);
+Mat scale(float x, float y);

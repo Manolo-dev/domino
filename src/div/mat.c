@@ -2,13 +2,13 @@
 
 void mat_apply(Mat m, float *x, float *y) {
     if (m.type == M2) {
-        float nx = m.m2.a * *x + m.m2.c * *y;
-        float ny = m.m2.b * *x + m.m2.d * *y;
+        float nx = m.m2.a * *x + m.m2.b * *y;
+        float ny = m.m2.c * *x + m.m2.d * *y;
         *x = nx; *y = ny;
     } else {
         float px = *x, py = *y;
-        float nx = m.m3.a*px + m.m3.c*py + m.m3.e;
-        float ny = m.m3.b*px + m.m3.d*py + m.m3.f;
+        float nx = m.m3.a*px + m.m3.b*py + m.m3.c;
+        float ny = m.m3.d*px + m.m3.e*py + m.m3.f;
         float nw = m.m3.g*px + m.m3.h*py + m.m3.i;
         if (fabsf(nw) < 1e-6f) nw = (nw < 0) ? -1e-6f : 1e-6f;
         *x = nx / nw;
@@ -25,20 +25,28 @@ Mat mat_inverse(Mat m) {
             .c = -m.m2.c*id, .d =  m.m2.a*id
         }};
     }
-    float a=m.m3.a, b=m.m3.b, c=m.m3.c, d=m.m3.d, e=m.m3.e,
-          f=m.m3.f, g=m.m3.g, h=m.m3.h, i=m.m3.i;
 
-    float A =  (d*i - f*h), B = -(b*i - f*g), C =  (b*h - d*g);
-    float D = -(c*i - e*h), E =  (a*i - e*g), F = -(a*h - c*g);
-    float G =  (c*f - e*d), H = -(a*f - e*b), I =  (a*d - c*b);
+    float a=m.m3.a, b=m.m3.b, c=m.m3.c,
+          d=m.m3.d, e=m.m3.e, f=m.m3.f,
+          g=m.m3.g, h=m.m3.h, i=m.m3.i;
 
-    float det = a*A + c*B + e*C;
+    float C00 = e*i - f*h;
+    float C01 = f*g - d*i;
+    float C02 = d*h - e*g;
+    float C10 = c*h - b*i;
+    float C11 = a*i - c*g;
+    float C12 = b*g - a*h;
+    float C20 = b*f - c*e;
+    float C21 = c*d - a*f;
+    float C22 = a*e - b*d;
+
+    float det = a*C00 + b*C01 + c*C02;
     float id = (det != 0.0f) ? 1.0f/det : 0.0f;
 
     return (Mat){ .type = M3, .m3 = {
-        .a = A*id, .b = B*id, .c = D*id,
-        .d = E*id, .e = G*id, .f = H*id,
-        .g = C*id, .h = F*id, .i = I*id
+        .a = C00*id, .b = C10*id, .c = C20*id,
+        .d = C01*id, .e = C11*id, .f = C21*id,
+        .g = C02*id, .h = C12*id, .i = C22*id
     }};
 }
 
@@ -58,7 +66,7 @@ Mat mat_mul(Mat m, Mat n) {
         m.m3.f = 0;
         m.m3.g = 0;
         m.m3.h = 0;
-        m.m3.f = 1;
+        m.m3.i = 1;
     }
 
     if (n.type == M2) {
@@ -67,7 +75,7 @@ Mat mat_mul(Mat m, Mat n) {
         n.m3.f = 0;
         n.m3.g = 0;
         n.m3.h = 0;
-        n.m3.f = 1;
+        n.m3.i = 1;
     }
 
     return (Mat){ .type = M3, .m3 = {
@@ -89,6 +97,9 @@ Mat mat_mul(Mat m, Mat n) {
 Mat rotate(float angle) {
     float c = cosf(angle);
     float s = sinf(angle);
+
+    // [ c   -s ]
+    // [ s    c ]
     return (Mat){ .type = M2, .m2 = { c, -s, s, c } };
 }
 
@@ -103,7 +114,7 @@ Mat rotate_x(float angle, float focal_length) {
         .type = M3,
         .m3 = {
             .a = 1, .b = 0, .c = 0,
-            .d = c, .e = 0, .f = 0,
+            .d = 0, .e = c, .f = 0,
             .g = 0, .h = s / focal_length, .i = 1
         }
     };
@@ -122,6 +133,33 @@ Mat rotate_y(float angle, float focal_length) {
             .a = c, .b = 0, .c = 0,
             .d = 0, .e = 1, .f = 0,
             .g = -s / focal_length, .h = 0, .i = 1
+        }
+    };
+}
+
+
+Mat translate(float x, float y) {
+    // [ 1   0   x ]
+    // [ 0   1   y ]
+    // [ 0   0   1 ]
+    return (Mat){
+        .type = M3,
+        .m3 = {
+            .a = 1, .b = 0, .c = x,
+            .d = 0, .e = 1, .f = y,
+            .g = 0, .h = 0, .i = 1
+        }
+    };
+}
+
+Mat scale(float x, float y) {
+    // [ x   0 ]
+    // [ 0   y ]
+    return (Mat){
+        .type = M2,
+        .m2 = {
+            .a = x, .b = 0,
+            .c = 0, .d = y
         }
     };
 }

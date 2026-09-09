@@ -46,6 +46,16 @@ static int64_t now_ms(void) {
     return (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
+static inline Mat transform(float g_angle) {
+    return mat_mul(
+        mat_mul(
+            rotate(g_angle),
+            rotate_x(g_angle, g_screen_w * 2.0)
+        ),
+        translate(100, 0)
+    );
+}
+
 static Div domino;
 static float g_angle = 0.0f;
 
@@ -60,7 +70,7 @@ static void build_scene(void) {
 
     domino = make_div(
         make_squircle(VW(22), VW(44), 6),
-        STYLE_INIT(.color=0xFFD0E8ED, .left=VW(20), .top=VH(20), .transform=mat_mul(rotate_y(g_angle / 2, g_screen_h * 2.0), rotate_x(g_angle, g_screen_w * 2.0)), .anchor=CENTER)
+        STYLE_INIT(.color=0xFFD0E8ED, .left=VW(20), .top=VH(20), .transform=transform(g_angle), .anchor=CENTER)
     );
     div_add_child(&root, &domino);
 
@@ -139,7 +149,7 @@ void android_main(struct android_app* app) {
         if (frame_start - last_frame >= FRAME_TIME_MS) {
             float delta = (float)(frame_start - last_frame) / 1000.0f;
             g_angle += delta * 0.8f;
-            domino.style.transform = mat_mul(rotate_y(g_angle / 2, g_screen_h * 2.0), rotate_x(g_angle, g_screen_w * 2.0));
+            domino.style.transform = transform(g_angle);
             domino._dirty = true;
 
             if (app->window != NULL) render_frame(&root);

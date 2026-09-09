@@ -15,7 +15,7 @@
         .top = 0,                                                        \
         .antialiasing = 1.0f,                                            \
         .alpha = 1.0f,                                                   \
-        .transform = MAT_IDENTITY,                                 \
+        .transform = MAT_IDENTITY,                                       \
         .anchor = LEFT_TOP,                                              \
         __VA_ARGS__                                                      \
     }                                                                    \
@@ -58,6 +58,8 @@ typedef struct div {
     //private:
     int _left, _top, _width, _height;
     Mat _inv;
+    Mat _world;
+    Mat _world_inv;
     bool _dirty;
     struct div *_parent;
     struct div *_first_child;
