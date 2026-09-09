@@ -1,5 +1,6 @@
 #include <android_native_app_glue.h>
 #include <android/native_window.h>
+#include <android/choreographer.h>
 #include <android/log.h>
 #include <time.h>
 #include <math.h>
@@ -12,15 +13,16 @@
 
 #define LOG(...) __android_log_print(ANDROID_LOG_INFO, "Domino", __VA_ARGS__)
 
-#define TARGET_FPS 120
-#define FRAME_TIME_MS (1000 / TARGET_FPS)
-
 static bool g_dirty = true;
 static int g_screen_w = 0;
 static int g_screen_h = 0;
 
 #define VW(pct) ((int)(g_screen_w * (pct) / 100.0f))
 #define VH(pct) ((int)(g_screen_h * (pct) / 100.0f))
+
+static struct android_app* g_app = NULL;
+static int64_t g_last_frame_ms = 0;
+static bool g_running = true;
 
 static void handle_cmd(struct android_app* app, int32_t cmd) {
     switch (cmd) {
@@ -40,12 +42,6 @@ static void handle_cmd(struct android_app* app, int32_t cmd) {
     }
 }
 
-static int64_t now_ms(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-}
-
 static inline Mat transform(float g_angle) {
     return mat_mul(
         mat_mul(
@@ -59,20 +55,20 @@ static inline Mat transform(float g_angle) {
 static Div domino;
 static float g_angle = 0.0f;
 
-static Div root, bar, cc;
+static Div bar, cc;
 static Div c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12;
 
 static void build_scene(void) {
-    root = make_div(
-        make_rect(g_screen_w, g_screen_h),
-        STYLE_INIT(.color=0xFF003309, .left=0, .top=0)
-    );
+    // root = make_div(
+    //     make_rect(g_screen_w, g_screen_h),
+    //     STYLE_INIT(.color=0xFF003309, .left=0, .top=0)
+    // );
 
     domino = make_div(
         make_squircle(VW(22), VW(44), 6),
         STYLE_INIT(.color=0xFFD0E8ED, .left=VW(20), .top=VH(20), .transform=transform(g_angle), .anchor=CENTER)
     );
-    div_add_child(&root, &domino);
+    // div_add_child(&root, &domino);
 
     bar = make_div(
         make_squircle(VW(20), VW(1) / 2, 8),
@@ -111,8 +107,27 @@ static void build_scene(void) {
     div_add_child(&domino, &c12);
 }
 
+static void frame_callback(long frame_time_ns, void* data) {
+    (void)data;
+    if (!g_running) return;
+
+    int64_t now = frame_time_ns / 1000000;
+    float delta = g_last_frame_ms ? (now - g_last_frame_ms) / 1000.0f : 0.0f;
+    g_last_frame_ms = now;
+
+    g_angle += delta * 0.8f;
+    domino.style.transform = transform(g_angle);
+    domino._dirty = true;
+    Div *divs[] = {&domino};
+
+    if (g_app->window != NULL) render_frame(1, divs, 0xFF003309);
+
+    AChoreographer_postFrameCallback(AChoreographer_getInstance(), frame_callback, NULL);
+}
+
 void android_main(struct android_app* app) {
     app->onAppCmd = handle_cmd;
+    g_app = app;
 
     int events;
     struct android_poll_source* source;
@@ -130,31 +145,15 @@ void android_main(struct android_app* app) {
 
     build_scene();
 
-    int64_t last_frame = now_ms();
+    AChoreographer_postFrameCallback(AChoreographer_getInstance(), frame_callback, NULL);
 
     while (1) {
-        int64_t now = now_ms();
-        int64_t next_frame = last_frame + FRAME_TIME_MS;
-        int64_t wait_ms = next_frame - now;
-
-        if (wait_ms < 0) wait_ms = 0;
-
-        while (ALooper_pollOnce(wait_ms, NULL, &events, (void**)&source) >= 0) {
+        if (ALooper_pollOnce(-1, NULL, &events, (void**)&source) >= 0) {
             if (source != NULL) source->process(app, source);
-            if (app->destroyRequested != 0) return;
-            wait_ms = 0;
-        }
-
-        int64_t frame_start = now_ms();
-        if (frame_start - last_frame >= FRAME_TIME_MS) {
-            float delta = (float)(frame_start - last_frame) / 1000.0f;
-            g_angle += delta * 0.8f;
-            domino.style.transform = transform(g_angle);
-            domino._dirty = true;
-
-            if (app->window != NULL) render_frame(&root);
-
-            last_frame = frame_start;
+            if (app->destroyRequested != 0) {
+                g_running = false;
+                return;
+            }
         }
     }
 }

@@ -16,7 +16,7 @@ static inline uint32_t blend(uint32_t bg, uint32_t fg, float a) {
     return ((uint32_t)al<<24) | ((uint32_t)b<<16) | ((uint32_t)g<<8) | r;
 }
 
-// Ma
+// Ma5
 static inline void anchor_offset(Div *div, float *ox, float *oy) {
     *ox = ((float)(div->style.anchor / 3) * 0.5f) * div->_width;
     *oy = ((float)(div->style.anchor % 3) * 0.5f) * div->_height;
@@ -34,6 +34,18 @@ float div_signed_distance(Div *div, float sx, float sy) {
 
 bool div_hit(Div *div, float x, float y) {
     return div_signed_distance(div, x, y) <= 0.0f;
+}
+
+static float div_coverage(Div *div, int screen_x, int screen_y) {
+    float hits = 0.0f;
+    for (int j = 0; j < SS_N; j++) {
+        for (int i = 0; i < SS_N; i++) {
+            float sx = screen_x + (i + 0.5f) / SS_N;
+            float sy = screen_y + (j + 0.5f) / SS_N;
+            if (div_signed_distance(div, sx, sy) <= 0.0f) hits += 1.0f;
+        }
+    }
+    return hits / (SS_N * SS_N);
 }
 
 // Utils div
@@ -104,27 +116,6 @@ void div_tree_update(Div *root, int screen_w, int screen_h) {
     }
 }
 
-static float div_coverage_supersampled(Div *div, int screen_x, int screen_y) {
-    float hits = 0.0f;
-    for (int j = 0; j < SS_N; j++) {
-        for (int i = 0; i < SS_N; i++) {
-            float sx = screen_x + (i + 0.5f) / SS_N;
-            float sy = screen_y + (j + 0.5f) / SS_N;
-            if (div_signed_distance(div, sx, sy) <= 0.0f) hits += 1.0f;
-        }
-    }
-    return hits / (SS_N * SS_N);
-}
-
-float div_coverage(Div *div, int x, int y) {
-    float dist = div_signed_distance(div, (float)x, (float)y);
-    float aa = div->style.antialiasing > 0.0f ? div->style.antialiasing : 1.0f;
-    float cov = 0.5f - dist / aa;
-    if (cov < 0.0f) cov = 0.0f;
-    if (cov > 1.0f) cov = 1.0f;
-    return cov;
-}
-
 static void div_screen_bbox(Div *div, int *x0, int *y0, int *x1, int *y1) {
     float cx[4] = {0, (float)div->_width, 0, (float)div->_width};
     float cy[4] = {0, 0, (float)div->_height, (float)div->_height};
@@ -160,7 +151,7 @@ static void real_div_draw(Div *div, Buffer *buffer, float accumulated_alpha) {
 
     for (int ty = y0; ty < y1; ty++) {
         for (int tx = x0; tx < x1; tx++) {
-            float cov = div_coverage_supersampled(div, tx, ty);
+            float cov = div_coverage(div, tx, ty);
             if (cov <= 0.0f) continue;
             uint32_t *p = &pixels[ty * buffer->stride + tx];
             *p = blend(*p, (uint32_t)div->style.color, cov * effective_alpha);
