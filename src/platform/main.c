@@ -27,12 +27,10 @@ static bool g_running = true;
 static void handle_cmd(struct android_app* app, int32_t cmd) {
     switch (cmd) {
         case APP_CMD_INIT_WINDOW:
-            if (app->window != NULL)
-                render_init(app->window);
-            g_dirty = true;
+            if (app->window)
+                ANativeWindow_setBuffersGeometry(app->window, 0, 0, WINDOW_FORMAT_RGBA_8888);
             break;
         case APP_CMD_TERM_WINDOW:
-            render_shutdown();
             break;
         case APP_CMD_WINDOW_RESIZED:
         case APP_CMD_WINDOW_REDRAW_NEEDED:
@@ -114,7 +112,19 @@ static void frame_callback(long frame_time_ns, void* data) {
     domino._dirty = true;
     Div* divs[] = {&domino};
 
-    if (g_app->window != NULL) render_frame(1, divs, 0xFF003309);
+    if (g_app->window != NULL) {
+        ANativeWindow_Buffer nwb;
+        if (ANativeWindow_lock(g_app->window, &nwb, NULL) == 0) {
+            Buffer buf = {
+                .bits   = nwb.bits,
+                .width  = (uint32_t)nwb.width,
+                .height = (uint32_t)nwb.height,
+                .stride = (uint32_t)nwb.stride,
+            };
+            render_frame(&buf, 1, divs, 0xFF003309);
+            ANativeWindow_unlockAndPost(g_app->window);
+        }
+    }
 
     AChoreographer_postFrameCallback(AChoreographer_getInstance(), frame_callback, NULL);
 }

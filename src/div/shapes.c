@@ -100,35 +100,3 @@ Shape make_squircle(Unit width, Unit height, float squareness) {
     s.free = squircle_free;
     return s;
 }
-
-
-/*
-// Trait
-typedef struct { Unit w, h, t; } LineData;
-
-static float line_signed_distance(void* data, float x, float y) {
-    LineData* rd = data;
-    float w = rd->w;
-    float h = rd->h;
-}
-
-static void line_sizes(void* data, Unit* w, Unit* h) {
-    LineData* rd = data;
-    *w = rd->w;
-    *h = rd->h;
-}
-
-static void line_free(void* data) { free(data); }
-
-Shape make_rect(Unit width, Unit height) {
-    LineData* rd = malloc(sizeof(LineData));
-    rd->w = width;
-    rd->h = height;
-    Shape s;
-    s._data = rd;
-    s.inside = line_signed_distance;
-    s.sizes = line_sizes;
-    s.free = line_free;
-    return s;
-}
-*/

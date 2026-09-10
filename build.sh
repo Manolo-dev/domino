@@ -19,7 +19,7 @@ GLUE="$NDK/sources/android/native_app_glue"
 # --------------------------------------------------------------------------- #
 CFLAGS_USER="-O3 -fPIC -Wall -Wextra -Werror"
 CFLAGS_GLUE="-O3 -fPIC"
-INCLUDES="-I$GLUE -Isrc -pthread"
+INCLUDES="-I$GLUE -Isrc"
 LDFLAGS="-shared -fPIC -u ANativeActivity_onCreate -landroid -llog -lm"
 
 # --------------------------------------------------------------------------- #

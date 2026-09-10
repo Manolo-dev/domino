@@ -42,6 +42,8 @@ typedef struct {
     float (*inside)(void* data, float x, float y);
     void  (*sizes)(void* data, Unit* width, Unit* height);
     void  (*free)(void* data);
+    const char *cl_sdf;
+    float cl_params[4];
 } Shape;
 
 typedef struct {
@@ -87,5 +89,6 @@ bool  div_hit(Div* div, float x, float y);
 void  div_add_child(Div* parent, Div* child);
 void  div_update(Div* div, int w, int h);
 void  div_tree_update(Div* root, int wp, int hp);
+void div_screen_bbox(Div* div, int* x0, int* y0, int* x1, int* y1);
 void  div_draw(Div* div, Buffer* buffer);
 void  div_free(Div* div);

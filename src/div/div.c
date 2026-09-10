@@ -116,7 +116,7 @@ void div_tree_update(Div* root, int screen_w, int screen_h) {
     }
 }
 
-static void div_screen_bbox(Div* div, int* x0, int* y0, int* x1, int* y1) {
+void div_screen_bbox(Div* div, int* x0, int* y0, int* x1, int* y1) {
     float cx[4] = {0, (float)div->_width, 0, (float)div->_width};
     float cy[4] = {0, 0, (float)div->_height, (float)div->_height};
 
