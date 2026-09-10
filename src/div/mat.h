@@ -11,7 +11,7 @@ typedef struct {
 
 #define MAT_IDENTITY ((Mat){ .type = M2, .m2 = {1, 0, 0, 1} })
 
-void mat_apply(Mat m, float *x, float *y);
+void mat_apply(Mat m, float*  x, float*  y);
 Mat mat_inverse(Mat m);
 Mat mat_mul(Mat m, Mat n);
 Mat rotate(float angle);

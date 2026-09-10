@@ -38,10 +38,10 @@ typedef enum {
 typedef float Unit;
 
 typedef struct {
-    void *_data;
-    float (*inside)(void *data, float x, float y);
-    void  (*sizes)(void *data, Unit *width, Unit *height);
-    void  (*free)(void *data);
+    void* _data;
+    float (*inside)(void* data, float x, float y);
+    void  (*sizes)(void* data, Unit* width, Unit* height);
+    void  (*free)(void* data);
 } Shape;
 
 typedef struct {
@@ -61,9 +61,9 @@ typedef struct div {
     Mat _world;
     Mat _world_inv;
     bool _dirty;
-    struct div *_parent;
-    struct div *_first_child;
-    struct div *_next_sibling;
+    struct div* _parent;
+    struct div* _first_child;
+    struct div* _next_sibling;
     //public:
     Onclick onclick;
     Shape shape;
@@ -71,7 +71,7 @@ typedef struct div {
 } Div;
 
 typedef struct {
-    uint32_t *bits;
+    uint32_t* bits;
     uint32_t width;
     uint32_t height;
     uint32_t stride;
@@ -81,11 +81,11 @@ Shape make_rect_shape(Unit width, Unit height);
 Shape make_circle_shape(Unit radius);
 
 Div make_div(Shape shape, Style style);
-void  div_onclick(Div *div, Onclick onclick);
-float div_signed_distance(Div *div, float x, float y);
-bool  div_hit(Div *div, float x, float y);
-void  div_add_child(Div *parent, Div *child);
-void  div_update(Div *div, int w, int h);
-void  div_tree_update(Div *root, int wp, int hp);
-void  div_draw(Div *div, Buffer *buffer);
-void  div_free(Div *div);
+void  div_onclick(Div* div, Onclick onclick);
+float div_signed_distance(Div* div, float x, float y);
+bool  div_hit(Div* div, float x, float y);
+void  div_add_child(Div* parent, Div* child);
+void  div_update(Div* div, int w, int h);
+void  div_tree_update(Div* root, int wp, int hp);
+void  div_draw(Div* div, Buffer* buffer);
+void  div_free(Div* div);

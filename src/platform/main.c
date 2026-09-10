@@ -59,16 +59,10 @@ static Div bar, cc;
 static Div c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12;
 
 static void build_scene(void) {
-    // root = make_div(
-    //     make_rect(g_screen_w, g_screen_h),
-    //     STYLE_INIT(.color=0xFF003309, .left=0, .top=0)
-    // );
-
     domino = make_div(
         make_squircle(VW(22), VW(44), 6),
         STYLE_INIT(.color=0xFFD0E8ED, .left=VW(20), .top=VH(20), .transform=transform(g_angle), .anchor=CENTER)
     );
-    // div_add_child(&root, &domino);
 
     bar = make_div(
         make_squircle(VW(20), VW(1) / 2, 8),
@@ -118,7 +112,7 @@ static void frame_callback(long frame_time_ns, void* data) {
     g_angle += delta * 0.8f;
     domino.style.transform = transform(g_angle);
     domino._dirty = true;
-    Div *divs[] = {&domino};
+    Div* divs[] = {&domino};
 
     if (g_app->window != NULL) render_frame(1, divs, 0xFF003309);
 

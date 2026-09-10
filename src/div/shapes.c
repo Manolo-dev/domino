@@ -3,8 +3,8 @@
 // Rectangle
 typedef struct { Unit w, h; } RectData;
 
-static float rect_signed_distance(void *data, float x, float y) {
-    RectData *rd = data;
+static float rect_signed_distance(void* data, float x, float y) {
+    RectData* rd = data;
     float w = rd->w;
     float h = rd->h;
     float cx = w/2.0f, cy = h/2.0f;
@@ -14,16 +14,16 @@ static float rect_signed_distance(void *data, float x, float y) {
     else                  return sqrtf(dx*dx + dy*dy);
 }
 
-static void rect_sizes(void *data, Unit *w, Unit *h) {
-    RectData *rd = data;
+static void rect_sizes(void* data, Unit* w, Unit* h) {
+    RectData* rd = data;
     *w = rd->w;
     *h = rd->h;
 }
 
-static void rect_free(void *data) { free(data); }
+static void rect_free(void* data) { free(data); }
 
 Shape make_rect(Unit width, Unit height) {
-    RectData *rd = malloc(sizeof(RectData));
+    RectData* rd = malloc(sizeof(RectData));
     rd->w = width;
     rd->h = height;
     Shape s;
@@ -37,24 +37,24 @@ Shape make_rect(Unit width, Unit height) {
 // Cercle
 typedef struct { Unit radius; } CircleData;
 
-static float circle_signed_distance(void *data, float x, float y) {
-    CircleData *cd = data;
+static float circle_signed_distance(void* data, float x, float y) {
+    CircleData* cd = data;
     float r = cd->radius;
     float dx = x - r, dy = y - r;
     return sqrtf(dx*dx + dy*dy) - r;
 }
 
-static void circle_sizes(void *data, Unit *w, Unit *h) {
-    CircleData *cd = data;
+static void circle_sizes(void* data, Unit* w, Unit* h) {
+    CircleData* cd = data;
     int radius_px = cd->radius;
     *w = radius_px * 2;
     *h = radius_px * 2;
 }
 
-static void circle_free(void *data) { free(data); }
+static void circle_free(void* data) { free(data); }
 
 Shape make_circle(Unit radius) {
-    CircleData *cd = malloc(sizeof(CircleData));
+    CircleData* cd = malloc(sizeof(CircleData));
     cd->radius = radius;
     Shape s;
     s._data = cd;
@@ -67,8 +67,8 @@ Shape make_circle(Unit radius) {
 // Courbe de Lamé
 typedef struct { Unit w, h; float s; } SquircleData;
 
-static float squircle_signed_distance(void *data, float x, float y) {
-    SquircleData *sd = data;
+static float squircle_signed_distance(void* data, float x, float y) {
+    SquircleData* sd = data;
     float w = sd->w, h = sd->h;
     if (!w || !h) return FLT_MAX;
     float cx = w / 2.0f, cy = h / 2.0f;
@@ -80,16 +80,16 @@ static float squircle_signed_distance(void *data, float x, float y) {
     return d * scale;
 }
 
-static void squircle_sizes(void *data, Unit *w, Unit *h) {
-    SquircleData *rd = data;
+static void squircle_sizes(void* data, Unit* w, Unit* h) {
+    SquircleData* rd = data;
     *w = rd->w;
     *h = rd->h;
 }
 
-static void squircle_free(void *data) { free(data); }
+static void squircle_free(void* data) { free(data); }
 
 Shape make_squircle(Unit width, Unit height, float squareness) {
-    SquircleData *sd = malloc(sizeof(SquircleData));
+    SquircleData* sd = malloc(sizeof(SquircleData));
     sd->w = width;
     sd->h = height;
     sd->s = squareness;
@@ -106,22 +106,22 @@ Shape make_squircle(Unit width, Unit height, float squareness) {
 // Trait
 typedef struct { Unit w, h, t; } LineData;
 
-static float line_signed_distance(void *data, float x, float y) {
-    LineData *rd = data;
+static float line_signed_distance(void* data, float x, float y) {
+    LineData* rd = data;
     float w = rd->w;
     float h = rd->h;
 }
 
-static void line_sizes(void *data, Unit *w, Unit *h) {
-    LineData *rd = data;
+static void line_sizes(void* data, Unit* w, Unit* h) {
+    LineData* rd = data;
     *w = rd->w;
     *h = rd->h;
 }
 
-static void line_free(void *data) { free(data); }
+static void line_free(void* data) { free(data); }
 
 Shape make_rect(Unit width, Unit height) {
-    LineData *rd = malloc(sizeof(LineData));
+    LineData* rd = malloc(sizeof(LineData));
     rd->w = width;
     rd->h = height;
     Shape s;

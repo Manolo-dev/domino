@@ -17,7 +17,7 @@ static inline uint32_t blend(uint32_t bg, uint32_t fg, float a) {
 }
 
 // Ma5
-static inline void anchor_offset(Div *div, float *ox, float *oy) {
+static inline void anchor_offset(Div* div, float*  ox, float*  oy) {
     *ox = ((float)(div->style.anchor / 3) * 0.5f) * div->_width;
     *oy = ((float)(div->style.anchor % 3) * 0.5f) * div->_height;
 }
@@ -25,18 +25,18 @@ static inline void anchor_offset(Div *div, float *ox, float *oy) {
 // Contenance div
 #define SS_N 2
 
-float div_signed_distance(Div *div, float sx, float sy) {
+float div_signed_distance(Div* div, float sx, float sy) {
     mat_apply(div->_world_inv, &sx, &sy);
     float rx = sx - div->_left;
     float ry = sy - div->_top;
     return div->shape.inside(div->shape._data, rx, ry);
 }
 
-bool div_hit(Div *div, float x, float y) {
+bool div_hit(Div* div, float x, float y) {
     return div_signed_distance(div, x, y) <= 0.0f;
 }
 
-static float div_coverage(Div *div, int screen_x, int screen_y) {
+static float div_coverage(Div* div, int screen_x, int screen_y) {
     float hits = 0.0f;
     for (int j = 0; j < SS_N; j++) {
         for (int i = 0; i < SS_N; i++) {
@@ -62,24 +62,24 @@ Div make_div(Shape shape, Style style) {
     return div;
 }
 
-void div_onclick(Div *div, Onclick onclick) {
+void div_onclick(Div* div, Onclick onclick) {
     div->onclick = onclick;
 }
 
-void div_add_child(Div *parent, Div *child) {
+void div_add_child(Div* parent, Div* child) {
     child->_parent = parent;
     child->_next_sibling = NULL;
 
     if (!parent->_first_child) parent->_first_child = child;
     else {
-        Div *last = parent->_first_child;
+        Div* last = parent->_first_child;
         while (last->_next_sibling)
             last = last->_next_sibling;
         last->_next_sibling = child;
     }
 }
 
-void div_update(Div *div, int screen_w, int screen_h) {
+void div_update(Div* div, int screen_w, int screen_h) {
     g_screen_w = screen_w;
     g_screen_h = screen_h;
 
@@ -106,17 +106,17 @@ void div_update(Div *div, int screen_w, int screen_h) {
     div->_world_inv = mat_inverse(div->_world);
 }
 
-void div_tree_update(Div *root, int screen_w, int screen_h) {
+void div_tree_update(Div* root, int screen_w, int screen_h) {
     if (!root) return;
     div_update(root, screen_w, screen_h);
-    Div *child = root->_first_child;
+    Div* child = root->_first_child;
     while (child) {
         div_tree_update(child, screen_w, screen_h);
         child = child->_next_sibling;
     }
 }
 
-static void div_screen_bbox(Div *div, int *x0, int *y0, int *x1, int *y1) {
+static void div_screen_bbox(Div* div, int* x0, int* y0, int* x1, int* y1) {
     float cx[4] = {0, (float)div->_width, 0, (float)div->_width};
     float cy[4] = {0, 0, (float)div->_height, (float)div->_height};
 
@@ -136,11 +136,11 @@ static void div_screen_bbox(Div *div, int *x0, int *y0, int *x1, int *y1) {
     *y1 = (int)ceilf(maxy) + pad;
 }
 
-static void real_div_draw(Div *div, Buffer *buffer, float accumulated_alpha) {
+static void real_div_draw(Div* div, Buffer* buffer, float accumulated_alpha) {
     float effective_alpha = accumulated_alpha * div->style.alpha;
     if (effective_alpha <= 0.0f) return;
 
-    uint32_t *pixels = buffer->bits;
+    uint32_t* pixels = buffer->bits;
 
     int x0, y0, x1, y1;
     div_screen_bbox(div, &x0, &y0, &x1, &y1);
@@ -153,27 +153,27 @@ static void real_div_draw(Div *div, Buffer *buffer, float accumulated_alpha) {
         for (int tx = x0; tx < x1; tx++) {
             float cov = div_coverage(div, tx, ty);
             if (cov <= 0.0f) continue;
-            uint32_t *p = &pixels[ty * buffer->stride + tx];
+            uint32_t* p = &pixels[ty * buffer->stride + tx];
             *p = blend(*p, (uint32_t)div->style.color, cov * effective_alpha);
         }
     }
 
-    Div *child = div->_first_child;
+    Div* child = div->_first_child;
     while (child) {
         real_div_draw(child, buffer, effective_alpha);
         child = child->_next_sibling;
     }
 }
 
-void div_draw(Div *div, Buffer *buffer) {
+void div_draw(Div* div, Buffer* buffer) {
     real_div_draw(div, buffer, 1.0f);
 }
 
-void div_free(Div *div) {
+void div_free(Div* div) {
     if (!div) return;
-    Div *child = div->_first_child;
+    Div* child = div->_first_child;
     while (child) {
-        Div *next = child->_next_sibling;
+        Div* next = child->_next_sibling;
         div_free(child);
         child = next;
     }

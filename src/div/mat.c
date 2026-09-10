@@ -1,6 +1,6 @@
 #include "mat.h"
 
-inline void mat_apply(Mat m, float *x, float *y) {
+inline void mat_apply(Mat m, float*  x, float*  y) {
     if (m.type == M2) {
         float nx = m.m2.a * *x + m.m2.b * *y;
         float ny = m.m2.c * *x + m.m2.d * *y;
